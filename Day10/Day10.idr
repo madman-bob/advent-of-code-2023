@@ -6,35 +6,13 @@ import Data.String.Parser
 import Deriving.Show
 import System.File
 
+import Data.String.Parse2D
+
 %default total
 %language ElabReflection
 
 maximum : List Nat -> Nat
 maximum ks = foldr max 0 ks
-
-data Direction = N | E | S | W
-
-%hint
-showDirection : Show Direction
-showDirection = %runElab derive
-
-Eq Direction where
-    (==) = on (==) $ \case N => 0; E => 1; S => 2; W => 3
-
-Coord : Type
-Coord = (Integer, Integer)
-
-complement : Direction -> Direction
-complement N = S
-complement E = W
-complement S = N
-complement W = E
-
-move : Direction -> Coord -> Coord
-move N (x, y) = (x, y - 1)
-move E (x, y) = (x + 1, y)
-move S (x, y) = (x, y + 1)
-move W (x, y) = (x - 1, y)
 
 data Pipe = PV | PH | PL | PJ | P7 | PF | PS
 
@@ -123,32 +101,18 @@ enclosed l = do
         [| ([0..maxX], [0..maxY]) |]
 
 covering
-landscape : ParseT (State Coord) Landscape
-landscape = map fromList $ many (lexeme pipe) <* lexeme eos
+landscape : Parse2D Landscape
+landscape = map fromList $ many (lexeme '.' [| (coord, pipe) |]) <* lexeme '.' eos
   where
-    char : Char -> a -> ParseT (State Coord) a
-    char c x = Parser.char c *> lift (modify $ mapFst (1 +)) *> pure x
-
-    newline : ParseT (State Coord) ()
-    newline = Parser.char '\n' *> lift (modify $ \(x, y) => (0, 1 + y))
-
-    pipe : ParseT (State Coord) (Coord, Pipe)
-    pipe = [| (
-        lift get,
-        char '|' PV <|>
-        char '-' PH <|>
-        char 'L' PL <|>
-        char 'J' PJ <|>
-        char '7' P7 <|>
-        char 'F' PF <|>
-        char 'S' PS
-      ) |]
-
-    ground : ParseT (State Coord) ()
-    ground = char '.' ()
-
-    lexeme : ParseT (State Coord) a -> ParseT (State Coord) a
-    lexeme p = many (ground <|> newline) *> p
+    pipe : Parse2D Pipe
+    pipe =
+        object '|' PV <|>
+        object '-' PH <|>
+        object 'L' PL <|>
+        object 'J' PJ <|>
+        object '7' P7 <|>
+        object 'F' PF <|>
+        object 'S' PS
 
 covering
 main : IO ()
@@ -161,7 +125,7 @@ main = do
     .....
     """
 
-    let Right (eg1, _) = evalState (0, 0) $ parseT landscape eg1
+    let Right (eg1, _) = parse2d landscape eg1
         | Left err => putStrLn err
 
     let eg2 = """
@@ -172,13 +136,13 @@ main = do
     LJ...
     """
 
-    let Right (eg2, _) = evalState (0, 0) $ parseT landscape eg2
+    let Right (eg2, _) = parse2d landscape eg2
         | Left err => putStrLn err
 
     Right input <- readFile "Day10/input"
         | Left err => printLn err
 
-    let Right (input, _) = evalState (0, 0) $ parseT landscape input
+    let Right (input, _) = parse2d landscape input
         | Left err => putStrLn err
 
     putStrLn "Part 1"
@@ -199,7 +163,7 @@ main = do
     ...........
     """
 
-    let Right (eg3, _) = evalState (0, 0) $ parseT landscape eg3
+    let Right (eg3, _) = parse2d landscape eg3
         | Left err => putStrLn err
 
     let eg4 = """
@@ -215,7 +179,7 @@ main = do
     L7JLJL-JLJLJL--JLJ.L
     """
 
-    let Right (eg4, _) = evalState (0, 0) $ parseT landscape eg4
+    let Right (eg4, _) = parse2d landscape eg4
         | Left err => putStrLn err
 
     putStrLn "Part 2"

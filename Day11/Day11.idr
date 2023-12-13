@@ -5,14 +5,13 @@ import Data.SortedSet
 import Data.String.Parser
 import System.File
 
+import Data.String.Parse2D
+
 %default total
 
 combinations : List a -> List (a, a)
 combinations [] = []
 combinations (x :: xs) = map (x,) xs ++ combinations xs
-
-Coord : Type
-Coord = (Integer, Integer)
 
 Image : Type
 Image = SortedSet Coord
@@ -45,23 +44,11 @@ totalDists : Image -> {default 2 expansionFactor : Integer} -> Integer
 totalDists i = sum $ map snd $ dists {expansionFactor} i
 
 covering
-image : ParseT (State Coord) Image
-image = map fromList $ many (lexeme galaxy) <* lexeme eos
+image : Parse2D Image
+image = map fromList $ many (lexeme '.' galaxy) <* lexeme '.' eos
   where
-    char : Char -> a -> ParseT (State Coord) a
-    char c x = Parser.char c *> lift (modify $ mapFst (1 +)) *> pure x
-
-    newline : ParseT (State Coord) ()
-    newline = Parser.char '\n' *> lift (modify $ \(x, y) => (0, 1 + y))
-
-    galaxy : ParseT (State Coord) Coord
-    galaxy = char '#' !(lift get)
-
-    ground : ParseT (State Coord) ()
-    ground = char '.' ()
-
-    lexeme : ParseT (State Coord) a -> ParseT (State Coord) a
-    lexeme p = many (ground <|> newline) *> p
+    galaxy : Parse2D Coord
+    galaxy = coord <* object '#' ()
 
 covering
 main : IO ()
@@ -79,13 +66,13 @@ main = do
     #...#.....
     """
 
-    let Right (eg, _) = evalState (0, 0) $ parseT image eg
+    let Right (eg, _) = parse2d image eg
         | Left err => putStrLn err
 
     Right input <- readFile "Day11/input"
         | Left err => printLn err
 
-    let Right (input, _) = evalState (0, 0) $ parseT image input
+    let Right (input, _) = parse2d image input
         | Left err => putStrLn err
 
     putStrLn "Part 1"
