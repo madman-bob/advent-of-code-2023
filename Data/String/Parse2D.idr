@@ -20,6 +20,10 @@ namespace Direction
         (==) = on (==) $ \case N => 0; E => 1; S => 2; W => 3
 
     public export
+    Ord Direction where
+        compare = on compare $ \case N => 0; E => 1; S => 2; W => 3
+
+    public export
     complement : Direction -> Direction
     complement N = S
     complement E = W
