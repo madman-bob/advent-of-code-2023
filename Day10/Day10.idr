@@ -102,7 +102,7 @@ enclosed l = do
 
 covering
 landscape : Parse2D Landscape
-landscape = map fromList $ many (lexeme '.' [| (coord, pipe) |]) <* lexeme '.' eos
+landscape = background '.' *> (map fromList $ many (lexeme '.' [| (coord, pipe) |])) <* eos
   where
     pipe : Parse2D Pipe
     pipe =

@@ -45,7 +45,7 @@ totalDists i = sum $ map snd $ dists {expansionFactor} i
 
 covering
 image : Parse2D Image
-image = map fromList $ many (lexeme '.' galaxy) <* lexeme '.' eos
+image = background '.' *> (map fromList $ many (lexeme '.' galaxy)) <* eos
   where
     galaxy : Parse2D Coord
     galaxy = coord <* object '#' ()

@@ -1,8 +1,9 @@
 module Data.String.Parse2D
 
-import Data.String.Parser
+import public Data.String.Parser
 import Deriving.Show
 
+%default total
 %language ElabReflection
 
 namespace Direction
@@ -54,12 +55,17 @@ newline : Parse2D ()
 newline = char '\n' *> lift (modify $ \(x, y) => (0, 1 + y))
 
 export
+covering
 background : Char -> Parse2D ()
-background c = ignore $ many (object c () <|> newline)
+background c = ignore $ many b *> optional newline *> many (some b *> optional newline)
+  where
+    b : Parse2D ()
+    b = object c ()
 
 export
+covering
 lexeme : Char -> Parse2D a -> Parse2D a
-lexeme c p = background c *> p
+lexeme c p = p <* background c
 
 export
 parse2d : Parse2D a -> String -> Either String (a, Int)
