@@ -44,19 +44,34 @@ namespace Coord
 
 public export
 Parse2D : Type -> Type
-Parse2D = ParseT (State Coord)
+Parse2D = ParseT (State (Coord, Nat))
 
 export
 coord : Parse2D Coord
-coord = lift get
+coord = map fst $ lift get
+
+export
+height : Parse2D Nat
+height = map (\case
+    (0, y) => cast y
+    (x, y) => S (cast y)) coord
+
+export
+width : Parse2D Nat
+width = map (\((x, y), w) => max (cast x) w) $ lift get
+
+export
+step : Parse2D ()
+step = lift $ modify $ mapFst $ mapFst (1 +)
 
 export
 object : Char -> a -> Parse2D a
-object c x = char c *> lift (modify $ mapFst (1 +)) *> pure x
+object c x = char c *> step *> pure x
 
 export
 newline : Parse2D ()
-newline = char '\n' *> lift (modify $ \(x, y) => (0, 1 + y))
+newline = char '\n' *>
+    lift (modify $ \((x, y), w) => ((0, 1 + y), max (cast x) w))
 
 export
 covering
@@ -73,4 +88,4 @@ lexeme c p = p <* background c
 
 export
 parse2d : Parse2D a -> String -> Either String (a, Int)
-parse2d p str = evalState (0, 0) $ parseT p str
+parse2d p str = evalState ((0, 0), 0) $ parseT p str
