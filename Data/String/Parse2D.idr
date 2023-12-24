@@ -42,6 +42,13 @@ namespace Coord
     move S (x, y) = (x, y + 1)
     move W (x, y) = (x - 1, y)
 
+    public export
+    moveN : Nat -> Direction -> Coord -> Coord
+    moveN n N (x, y) = (x, y - cast n)
+    moveN n E (x, y) = (x + cast n, y)
+    moveN n S (x, y) = (x, y + cast n)
+    moveN n W (x, y) = (x - cast n, y)
+
 public export
 Parse2D : Type -> Type
 Parse2D = ParseT (State (Coord, Nat))
