@@ -26,10 +26,9 @@ public export
 (.end) : Range -> Nat
 (.end) = end
 
-%hint
 public export
-showRange : Show Range
-showRange = %runElab derive
+Show Range where
+    show r = "[\{show r.start}..\{show r.end}]"
 
 public export
 before : Range -> Nat -> Bool
