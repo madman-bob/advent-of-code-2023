@@ -1,64 +1,71 @@
 module Data.Graph
 
-import Data.SortedMap
-import Data.SortedSet
+import Libraries.Data.SortedMap
 
 %default total
 
-export
-record Graph a where
+public export
+record Graph w a where
     constructor MkGraph
     {auto ord : Ord a}
-    edges : SortedMap a (List (a, Nat))
+    edges : SortedMap a (List (a, w))
 
 %name Graph g
 
 export
-Show a => Show (Graph a) where
+Show w => Show a => Show (Graph w a) where
     show g = "MkGraph (\{show g.edges})"
 
-%hint
 export
-graphOrd : Graph a => Ord a
-graphOrd @{g} = g.ord
+Foldable (Graph w) where
+    foldr f x g = foldr f x $ keys g.edges
+    foldl f x g = foldl f x $ keys g.edges
+    null g = null $ keys g.edges
+    foldlM f x g = foldlM f x $ keys g.edges
+    toList g = keys g.edges
+    foldMap f g = foldMap f $ keys g.edges
 
 export
-toEdges : Graph a -> List (a, a, Nat)
+toEdges : Graph w a -> List (a, a, w)
 toEdges g = do
     (node, dests) <- SortedMap.toList g.edges
     map (node,) dests
 
 add : k -> v -> SortedMap k (List v) -> SortedMap k (List v)
-add x y xs = update (\ys => Just $ y :: maybe [] id ys) x xs
+add x y xs = insert x (y :: maybe [] id (lookup x xs)) xs
 
 export
-fromEdges : Ord a => List (a, a, Nat) -> Graph a
+fromEdges : Ord a => List (a, a, w) -> Graph w a
 fromEdges xs = MkGraph $ foldr (\(x, y) => add x y) empty xs
 
 export
-minPath : Graph a ->
+covering
+||| Terminates when there are no cycles of negative length
+minPath : Ord w =>
+          Num w =>
+          Graph w a ->
           (start : a) ->
           (end : a) ->
-          Maybe Nat
-minPath g start end = minPath' empty (singleton 0 [start]) 0
+          Maybe w
+minPath g start end = minPath' empty (singleton 0 [start])
   where
-    lookup : k -> SortedMap k (List v) -> List v
-    lookup x xs = maybe [] id $ SortedMap.lookup x xs
+    %hint
+    ordA : Ord a
+    ordA = g.ord
 
-    minPath' : SortedSet a ->
-             SortedMap Nat (List a) ->
-             Nat ->
-             Maybe Nat
-    minPath' closed open_ d = if null open_
-        then Nothing
-        else do
-            let boundary = lookup d open_
-            let False = elem end boundary
-                | True => Just d
-            let closed = union (SortedSet.fromList boundary) closed
-            let neighbours = filter (\(node, _) => not $ contains node closed) $
-                  SortedMap.toList $
-                  foldr (mergeWith min) empty $
-                  map (\node => SortedMap.fromList $ map (mapSnd (+ d)) $ lookup node g.edges) boundary
-            let open_ = foldr (\(node, d) => add d node) open_ neighbours
-            assert_total $ minPath' closed (delete d open_) (S d)
+    lookup' : k -> SortedMap k (List v) -> List v
+    lookup' x xs = maybe [] id $ lookup x xs
+
+    minPath' : SortedMap a w ->
+               SortedMap w (List a) ->
+               Maybe w
+    minPath' closed open_ = do
+        let Just ((d, boundary), open_) = pop open_
+            | Nothing => lookup end closed
+        let neighbours = filter (\(node, e) => maybe True (e <) (lookup node closed)) $
+              SortedMap.toList $
+              foldr (mergeWith min) empty $
+              map (\node => SortedMap.fromList $ map (mapSnd (+ d)) $ lookup' node g.edges) boundary
+        let closed = mergeWith min (SortedMap.fromList neighbours) closed
+        let open_ = foldr (\(node, d) => add d node) SortedMap.empty neighbours
+        minPath' closed open_

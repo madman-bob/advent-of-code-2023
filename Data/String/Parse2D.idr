@@ -1,5 +1,6 @@
 module Data.String.Parse2D
 
+import public Control.Monad.State
 import public Data.String.Parser
 import Deriving.Show
 

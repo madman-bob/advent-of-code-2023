@@ -17,6 +17,7 @@ record City where
 Show City where
     show cty = "MkCity (\{show cty.blocks}) \{show cty.width} \{show cty.height}"
 
+covering
 findPath : City ->
            {default 1 minSteps : Nat} ->
            {default 3 maxSteps : Nat} ->
